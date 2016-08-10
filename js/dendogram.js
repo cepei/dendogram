@@ -32,6 +32,7 @@ d3.csv("eco_costa_rica.csv", function(data){
 	    .linkDistance(60)
 	    .charge(-100)
 	    .on("tick", tick)
+	    .gravity(0.01)
 	    .start();
 
 	var svg = d3.select("body").append("svg")
