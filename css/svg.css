@@ -9,11 +9,13 @@
   fill: green;
 }
 
+/*
 .link.ods-fuente {
   stroke: green;
 }
+*/
 
-.link.fuente-datos {
+.link {
   stroke-dasharray: 0,2 1;
 }
 

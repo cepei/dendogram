@@ -16,9 +16,9 @@ d3.csv("eco_costa_rica.csv", function(data){
 	  links.push({"source": d.FUENTE, "target":d.DATOS, "type": "fuente-datos"});
 	});
 
-	links.forEach(function(link) {
-	  link.source = nodes[link.source] || (nodes[link.source] = {name: link.source, type: link.type=="ods-fuente"?"ods":"fuente"});
-	  link.target = nodes[link.target] || (nodes[link.target] = {name: link.target, type: link.type=="ods-fuente"?"fuente":"datos"});
+	links.forEach(function(link, i) {
+	  link.source = nodes[link.source] || (nodes[link.source] = {name: link.source, type: link.type=="ods-fuente"?"ods":"fuente", link_id: i});
+	  link.target = nodes[link.target] || (nodes[link.target] = {name: link.target, type: link.type=="ods-fuente"?"fuente":"datos", link_id: i});
 	});
 	
 
@@ -32,7 +32,7 @@ d3.csv("eco_costa_rica.csv", function(data){
 	    .size([width, height])
 	    .linkDistance(60)
 	    .linkStrength(0)
-	    .friction(0.7)
+	    .friction(0.85)
 	    .gravity(0.1)
 	    .charge(-30)
 	    .on("tick", moveToRadial)
@@ -52,7 +52,7 @@ d3.csv("eco_costa_rica.csv", function(data){
 	    .data(force.nodes())
 	  .enter().append("circle")
 	    .attr("r", 6)
-	    .attr("class", function(d) { return "link " + d.type; })
+	    .attr("class", function(d) { return d.type; })
 	    .call(force.drag);
 
 	var text = svg.append("g").selectAll("text")
@@ -63,16 +63,21 @@ d3.csv("eco_costa_rica.csv", function(data){
 	    //.text(function(d) { return d.name; });
 
 	function moveToRadial(e) {
+		//~ console.log(d3.selectAll("circle.ods")[0].map(function(obj){
+				//~ return obj.__data__.link_id;
+			//~ }))
 		path.attr("d", linkArc);
 	  circle.each(function(d,i) { radial(d,i,e.alpha); });
+		
 	  circle
 		.attr("cx", function(d) { return d.x; })
-		.attr("cy", function(d) { return d.y; });
-	  text.each(function(d,i) { radial(d,i,e.alpha); });
-	  text
-		.attr("cx", function(d) { return d.x; })
-		.attr("cy", function(d) { return d.y; });
-		
+		.attr("cy", function(d) { return d.y; })
+		.attr("data_link_id", function(d){return d.link_id })
+	  //~ text.each(function(d,i) { radial(d,i,e.alpha); });
+	  //~ text
+		//~ .attr("cx", function(d) { return d.x; })
+		//~ .attr("cy", function(d) { return d.y; });
+		//~ 
 
 	}
 	
@@ -80,6 +85,9 @@ d3.csv("eco_costa_rica.csv", function(data){
 		// check out the post
 		// http://macwright.org/2013/03/05/math-for-pictures.html
 		// for more info on how this works
+		var links_ids = d3.selectAll("circle." + data.type)[0].map(function(obj){
+				return obj.__data__.link_id;
+			})
 		var increment_angle = 360/d3.selectAll("circle." + data.type)[0].length
 		var startAngle = 0;
 		if(data.type=="ods")
@@ -88,8 +96,8 @@ d3.csv("eco_costa_rica.csv", function(data){
 			var radius = 200;
 		if(data.type=="datos")
 			var radius = 400;
-		
-		var currentAngle = startAngle + (increment_angle * index);
+		//console.log(links_ids.indexOf(data.link_id));
+		var currentAngle = startAngle + (increment_angle * links_ids.indexOf(data.link_id));
 		var currentAngleRadians = currentAngle * D2R;
 		// the 500 & 250 are to center the circle we are creating
 		var radialPoint = {
@@ -118,7 +126,6 @@ d3.csv("eco_costa_rica.csv", function(data){
 	  var dx = d.target.x - d.source.x,
 	      dy = d.target.y - d.source.y,
 	      dr = Math.sqrt(dx * dx + dy * dy);
-	  //return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
 	  return "M" + d.source.x + "," + d.source.y + "L" + d.target.x + "," + d.target.y;
 	}
 
@@ -126,5 +133,4 @@ d3.csv("eco_costa_rica.csv", function(data){
 	  return "translate(" + d.x + "," + d.y + ")";
 	}
 
-	console.log(force.nodes())
 })
