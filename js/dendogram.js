@@ -22,8 +22,8 @@ d3.csv("eco_costa_rica.csv", function(data){
 	});
 	
 
-	var width = 2000,
-	    height = 1000,
+	var width = 800,
+	    height = 800,
 		D2R = Math.PI / 180;
 
 	var force = d3.layout.force()
@@ -32,9 +32,10 @@ d3.csv("eco_costa_rica.csv", function(data){
 	    .size([width, height])
 	    .linkDistance(60)
 	    .linkStrength(0)
-	    //.charge(-30)
+	    .friction(0.7)
+	    .gravity(0.1)
+	    .charge(-30)
 	    .on("tick", moveToRadial)
-	    //.gravity(10)
 	    .start();
 
 	var svg = d3.select("body").append("svg")
@@ -79,15 +80,16 @@ d3.csv("eco_costa_rica.csv", function(data){
 		// check out the post
 		// http://macwright.org/2013/03/05/math-for-pictures.html
 		// for more info on how this works
-		var startAngle = 30;
+		var increment_angle = 360/d3.selectAll("circle." + data.type)[0].length
+		var startAngle = 0;
 		if(data.type=="ods")
-			var radius = 100;
+			var radius = 50;
 		if(data.type=="fuente")
 			var radius = 200;
 		if(data.type=="datos")
-			var radius = 300;
+			var radius = 400;
 		
-		var currentAngle = startAngle + (30 * index);
+		var currentAngle = startAngle + (increment_angle * index);
 		var currentAngleRadians = currentAngle * D2R;
 		// the 500 & 250 are to center the circle we are creating
 		var radialPoint = {
@@ -110,13 +112,6 @@ d3.csv("eco_costa_rica.csv", function(data){
 		data.y += (radialPoint.y - data.y) * affectSize;
 
 
-	}
-
-	// Use elliptical arc path segments to doubly-encode directionality.
-	function tick() {
-	  path.attr("d", linkArc);
-	  circle.attr("transform", transform);
-	  text.attr("transform", transform);
 	}
 
 	function linkArc(d) {
