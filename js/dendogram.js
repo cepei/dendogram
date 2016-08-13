@@ -55,6 +55,37 @@ d3.csv("eco_colombia.csv", function(data){
 	    .attr("x", 8)
 	    .attr("y", ".31em")
 
+	//************************************
+	//calculate data positions from start
+	//************************************
+	var angles = {"ods":{}, "fuente":{}, "datos":{}}
+
+	for(var type in angles){
+		d3.selectAll("circle." + type )[0].forEach(function(obj,i){
+					var increment_angle = 360/d3.selectAll("circle." + type)[0].length
+					if(type=="ods")
+						var radius = 200;
+					if(type=="fuente")
+						var radius = 300;
+					if(type=="datos")
+						var radius = 400;
+					var startAngle = 0;
+					var currentAngle = startAngle + (increment_angle * i);
+					var currentAngleRadians = currentAngle * D2R;
+					// the 500 & 250 are to center the circle we are creating
+					angles[type][obj.__data__.link_id] = {
+					  x: 450 + radius * Math.cos(currentAngleRadians),
+					  y: 450 + radius * Math.sin(currentAngleRadians)
+					};
+					//return coordinates;
+				})
+	}
+
+
+	console.log(angles)
+
+
+	//************************************
 
 	function moveToRadial(e) {
 		console.log(e)
@@ -66,30 +97,15 @@ d3.csv("eco_colombia.csv", function(data){
 		.attr("cy", function(d) { return d.y; })
 		.attr("data_link_id", function(d){return d.link_id })
 	}
-	
+
+
 	function radial(data, index, alpha) {
 		// check out the post
 		// http://macwright.org/2013/03/05/math-for-pictures.html
 		// for more info on how this works
-		var links_ids = d3.selectAll("circle." + data.type)[0].map(function(obj){
-				return obj.__data__.link_id;
-			})
-		var increment_angle = 360/d3.selectAll("circle." + data.type)[0].length
-		var startAngle = 0;
-		if(data.type=="ods")
-			var radius = 200;
-		if(data.type=="fuente")
-			var radius = 300;
-		if(data.type=="datos")
-			var radius = 400;
-		var currentAngle = startAngle + (increment_angle * links_ids.indexOf(data.link_id));
-		var currentAngleRadians = currentAngle * D2R;
 		// the 500 & 250 are to center the circle we are creating
-		var radialPoint = {
-		  x: 450 + radius * Math.cos(currentAngleRadians),
-		  y: 450 + radius * Math.sin(currentAngleRadians)
-		};
 
+		var radialPoint = angles[data.type][data.link_id]
 
 		// here we attenuate the effect of the centering
 		// by the alpha of the force layout. 
@@ -108,9 +124,6 @@ d3.csv("eco_colombia.csv", function(data){
 	}
 
 	function linkArc(d) {
-	  var dx = d.target.x - d.source.x,
-	      dy = d.target.y - d.source.y,
-	      dr = Math.sqrt(dx * dx + dy * dy);
 	  return "M" + d.source.x + "," + d.source.y + "L" + d.target.x + "," + d.target.y;
 	}
 
