@@ -110,6 +110,7 @@ d3.csv("eco_colombia.csv", function(data){
 	    	//d3.selectAll("circle").classed("selected", false)
 	    	d3.selectAll("circle")
 	    	.classed("selected", function(d){ return associated.indexOf(d.name) != -1})
+	    	.style("filter", function(d){ return associated.indexOf(d.name) != -1?"url(#drop-shadow)":""})
 
 
 	    	d3.selectAll(".link").classed("selected", 

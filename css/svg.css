@@ -16,7 +16,6 @@
 */
 circle.selected {
   stroke-width: 1px;
-  filter: url(../index.html#drop-shadow);
 }
 
 
