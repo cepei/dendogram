@@ -114,7 +114,6 @@ d3.csv("eco_colombia.csv", function(data){
 
 	    	d3.selectAll(".link").classed("selected", 
 	    								function(d){ 
-	    									console.log(d);
 	    									return associated.indexOf(d.source.name) != -1 && associated.indexOf(d.target.name) != -1})
 
 	    	d3.select("#tooltip")
@@ -158,9 +157,6 @@ d3.csv("eco_colombia.csv", function(data){
 					//return coordinates;
 				})
 	}
-
-	console.log(positions)
-
 
 
 	//************************************
