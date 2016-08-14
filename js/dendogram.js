@@ -1,4 +1,4 @@
-d3.csv("eco_colombia.csv", function(data){
+d3.csv("eco_costa_rica.csv", function(data){
 	var nodes = {};
 	var links = []
 
@@ -32,7 +32,7 @@ d3.csv("eco_colombia.csv", function(data){
 	    .on("tick", moveToRadial)
 	    .start();
 
-	var svg = d3.select("body").append("svg")
+	var svg = d3.select("#forcemap").append("svg")
 	    .attr("width", width)
 	    .attr("height", height);
 
@@ -47,7 +47,20 @@ d3.csv("eco_colombia.csv", function(data){
 	  .enter().append("circle")
 	    .attr("r", 6)
 	    .attr("class", function(d) { return d.type; })
-	    .call(force.drag);
+	    .call(force.drag)
+	    .on("click", function(d){
+	    	//d3.selectAll()
+	    	d3.selectAll("circle").classed("selected", false)
+	    	d3.select(this).classed("selected", true)
+
+	    	d3.select("#tooltip")
+	  	    .attr("class", d.type)
+	    	.html( "<b>" + d.type.toUpperCase() + "</b>: " + d.name)
+
+	    	console.log(data.filter(function(obj){
+	    		return obj[d.type.toUpperCase()] == d.name
+	    	}))
+	    })
 
 	var text = svg.append("g").selectAll("text")
 	    .data(force.nodes())
@@ -58,11 +71,11 @@ d3.csv("eco_colombia.csv", function(data){
 	//************************************
 	//calculate data positions from start
 	//************************************
-	var angles = {"ods":{}, "fuente":{}, "datos":{}}
+	var positions = {"ods":{}, "fuente":{}, "datos":{}}
 
-	for(var type in angles){
+	for(var type in positions){
 		d3.selectAll("circle." + type )[0].forEach(function(obj,i){
-					var increment_angle = 360/d3.selectAll("circle." + type)[0].length
+					var increment_angle = 360/(d3.selectAll("circle." + type)[0].length)
 					if(type=="ods")
 						var radius = 200;
 					if(type=="fuente")
@@ -73,22 +86,22 @@ d3.csv("eco_colombia.csv", function(data){
 					var currentAngle = startAngle + (increment_angle * i);
 					var currentAngleRadians = currentAngle * D2R;
 					// the 500 & 250 are to center the circle we are creating
-					angles[type][obj.__data__.link_id] = {
-					  x: 450 + radius * Math.cos(currentAngleRadians),
-					  y: 450 + radius * Math.sin(currentAngleRadians)
+					var laps = Math.floor(d3.selectAll("circle." + type)[0].length/180) + 1;
+					positions[type][obj.__data__.link_id] = {
+					  x: 450 + (radius - (20*(i%laps))) * Math.cos(currentAngleRadians),
+					  y: 450 + (radius - (20*(i%laps))) * Math.sin(currentAngleRadians)
 					};
 					//return coordinates;
 				})
 	}
 
+	console.log(positions)
 
-	console.log(angles)
 
 
 	//************************************
 
 	function moveToRadial(e) {
-		console.log(e)
 		path.attr("d", linkArc);
 	  circle.each(function(d,i) { radial(d,i,e.alpha); });
 		
@@ -102,21 +115,10 @@ d3.csv("eco_colombia.csv", function(data){
 	function radial(data, index, alpha) {
 		// check out the post
 		// http://macwright.org/2013/03/05/math-for-pictures.html
-		// for more info on how this works
-		// the 500 & 250 are to center the circle we are creating
 
-		var radialPoint = angles[data.type][data.link_id]
 
-		// here we attenuate the effect of the centering
-		// by the alpha of the force layout. 
-		// this gives other forces - like gravity -
-		// to have an effect on the nodes
+		var radialPoint = positions[data.type][data.link_id]
 		var affectSize = alpha * 0.1 ;
-
-		// here we adjust the x / y coordinates stored in our
-		// data to move them closer to where we want them
-		// this doesn't move the visual circles yet - 
-		// we will do that in moveToRadial
 		data.x += (radialPoint.x - data.x) * affectSize;
 		data.y += (radialPoint.y - data.y) * affectSize;
 
