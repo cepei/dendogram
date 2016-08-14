@@ -14,13 +14,15 @@
   stroke: green;
 }
 */
-.selected {
-  opacity: 0.2;
+circle.selected {
+  stroke-width: 1px;
+  filter: url(../index.html#drop-shadow);
 }
 
 
-.link {
-  /*stroke-dasharray: 0,2 1;*/
+.link.selected {
+  stroke-dasharray: 0,2 1;
+  stroke: #000;
 }
 
 circle {

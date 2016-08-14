@@ -1,4 +1,4 @@
-d3.csv("eco_costa_rica.csv", function(data){
+d3.csv("eco_colombia.csv", function(data){
 	var nodes = {};
 	var links = []
 
@@ -36,6 +36,52 @@ d3.csv("eco_costa_rica.csv", function(data){
 	    .attr("width", width)
 	    .attr("height", height);
 
+
+
+
+
+	// filters go in defs element
+	var defs = svg.append("defs");
+
+	// create filter with id #drop-shadow
+	// height=130% so that the shadow is not clipped
+	var filter = defs.append("filter")
+	    .attr("id", "drop-shadow")
+	    .attr("x", "-200%")
+	    .attr("y", "-200%")
+	    .attr("height", "400%")
+		.attr("width", "400%");
+
+	// SourceAlpha refers to opacity of graphic that this filter will be applied to
+	// convolve that with a Gaussian with standard deviation 3 and store result
+	// in blur
+	filter.append("feGaussianBlur")
+	    .attr("in", "SourceAlpha")
+	    .attr("stdDeviation", 5)
+	    .attr("result", "blur");
+
+	// translate output of Gaussian blur to the right and downwards with 2px
+	// store result in offsetBlur
+	filter.append("feOffset")
+	    .attr("in", "blur")
+	    .attr("dx", 1)
+	    .attr("dy", 1)
+	    .attr("result", "offsetBlur");
+
+	// overlay original SourceGraphic over translated blurred opacity by using
+	// feMerge filter. Order of specifying inputs is important!
+	var feMerge = filter.append("feMerge");
+
+	feMerge.append("feMergeNode")
+	    .attr("in", "offsetBlur")
+	feMerge.append("feMergeNode")
+	    .attr("in", "SourceGraphic");
+
+
+
+
+
+
 	var path = svg.append("g").selectAll("path")
 	    .data(force.links())
 	  .enter().append("path")
@@ -50,17 +96,35 @@ d3.csv("eco_costa_rica.csv", function(data){
 	    .call(force.drag)
 	    .on("click", function(d){
 	    	//d3.selectAll()
-	    	d3.selectAll("circle").classed("selected", false)
-	    	d3.select(this).classed("selected", true)
+	    	var associated = [];
+
+	    	data.filter(function(obj){
+	    		return obj[d.type.toUpperCase()] == d.name
+	    	}).forEach(function(d){
+	    		associated.push(d.ODS);
+	    		associated.push(d.FUENTE);
+	    		associated.push(d.DATOS);
+
+	    	})
+
+	    	//d3.selectAll("circle").classed("selected", false)
+	    	d3.selectAll("circle")
+	    	.classed("selected", function(d){ return associated.indexOf(d.name) != -1})
+
+
+	    	d3.selectAll(".link").classed("selected", 
+	    								function(d){ 
+	    									console.log(d);
+	    									return associated.indexOf(d.source.name) != -1 && associated.indexOf(d.target.name) != -1})
 
 	    	d3.select("#tooltip")
 	  	    .attr("class", d.type)
 	    	.html( "<b>" + d.type.toUpperCase() + "</b>: " + d.name)
 
-	    	console.log(data.filter(function(obj){
-	    		return obj[d.type.toUpperCase()] == d.name
-	    	}))
+
 	    })
+	    //.style("filter", "url(#drop-shadow)")
+
 
 	var text = svg.append("g").selectAll("text")
 	    .data(force.nodes())
