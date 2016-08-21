@@ -34,7 +34,7 @@ function create_graph(filename){
 		    .friction(0.9)
 		    .gravity(0)
 		    .charge(-200)
-		    .chargeDistance(20)
+		    .chargeDistance(10)
 		    .on("tick", moveToRadial)
 		    .start();
 
@@ -101,10 +101,10 @@ function create_graph(filename){
 		  .enter().append("circle")
 		    .attr("r", function(d){
 		    	if(d.type=="ods")
-		    		return 9
+		    		return 10
 		    	if(d.type=="fuente")
-		    		return 6
-		    	return 3
+		    		return 4
+		    	return 2
 		    })
 		    .attr("class", function(d) { return d.type; })
 		    .call(force.drag)
@@ -137,6 +137,7 @@ function create_graph(filename){
 
 
 		    })
+	/**/	    .classed("fixed", true);
 		    //.style("filter", "url(#drop-shadow)")
 
 
@@ -193,8 +194,8 @@ function create_graph(filename){
 							    			.filter(function(d){ return associated_ods.indexOf(d.name) != -1})
 							    			//.map(function(d){ return {x:d.x, y:d.y}})
 							    			.forEach(function(d, i, arr){
-							    				coordinates.x += (positions.ods[d.link_id].x - 450)/(arr.length + 1);	
-							    				coordinates.y += (positions.ods[d.link_id].y - 450)/(arr.length + 1);	
+							    				coordinates.x += (positions.ods[d.link_id].x - 450)/(arr.length + 0.5);	
+							    				coordinates.y += (positions.ods[d.link_id].y - 450)/(arr.length + 0.5);	
 							    			})
 							    positions[type][obj.__data__.link_id] = coordinates;
 							}
@@ -206,13 +207,10 @@ function create_graph(filename){
 
 
 
-
-
-
 		//************************************
 
 		function moveToRadial(e) {
-			console.log(":::" + filename)
+			//console.log(":::" + filename)
 			path.attr("d", linkArc);
 		  circle.each(function(d,i) { radial(d,i,e.alpha); });
 			
