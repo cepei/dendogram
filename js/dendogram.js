@@ -33,8 +33,8 @@ function create_graph(filename){
 		    .linkStrength(0)
 		    .friction(0.9)
 		    .gravity(0)
-		    .charge(-30)
-		    .chargeDistance(6)
+		    .charge(-200)
+		    .chargeDistance(20)
 		    .on("tick", moveToRadial)
 		    .start();
 
@@ -99,7 +99,13 @@ function create_graph(filename){
 		var circle = svg.append("g").selectAll("circle")
 		    .data(force.nodes())
 		  .enter().append("circle")
-		    .attr("r", 6)
+		    .attr("r", function(d){
+		    	if(d.type=="ods")
+		    		return 9
+		    	if(d.type=="fuente")
+		    		return 6
+		    	return 3
+		    })
 		    .attr("class", function(d) { return d.type; })
 		    .call(force.drag)
 		    .on("click", function(d){
@@ -145,27 +151,62 @@ function create_graph(filename){
 		//************************************
 		var positions = {"ods":{}, "fuente":{}, "datos":{}}
 
+			d3.selectAll("circle.ods")
+				.sort(function(a,b){
+					//console.log(a);
+					return d3.ascending(parseInt(a.name.split(" ")[0]), parseInt(b.name.split(" ")[0]))
+				})[0]
+				.forEach(function(obj,i){
+					console.log(d3.select(obj).data()[0].name)
+					var increment_angle = 360/(d3.selectAll("circle.ods")[0].length)
+					var radius = 400;
+					var startAngle = 0;
+					var currentAngle = startAngle + (increment_angle * i);
+					var currentAngleRadians = currentAngle * D2R;
+					// the 500 & 250 are to center the circle we are creating
+					var laps = Math.floor(d3.selectAll("circle.ods")[0].length/180) + 1;
+					positions["ods"][obj.__data__.link_id] = {
+					  x: 450 + (radius - (20*(i%laps))) * Math.cos(currentAngleRadians),
+					  y: 450 + (radius - (20*(i%laps))) * Math.sin(currentAngleRadians)
+					};
+					//return coordinates;
+				})
+
+
 		for(var type in positions){
 			d3.selectAll("circle." + type )[0].forEach(function(obj,i){
-						var increment_angle = 360/(d3.selectAll("circle." + type)[0].length)
-						if(type=="ods")
-							var radius = 200;
-						if(type=="fuente")
-							var radius = 300;
-						if(type=="datos")
-							var radius = 400;
-						var startAngle = 0;
-						var currentAngle = startAngle + (increment_angle * i);
-						var currentAngleRadians = currentAngle * D2R;
-						// the 500 & 250 are to center the circle we are creating
-						var laps = Math.floor(d3.selectAll("circle." + type)[0].length/180) + 1;
-						positions[type][obj.__data__.link_id] = {
-						  x: 450 + (radius - (20*(i%laps))) * Math.cos(currentAngleRadians),
-						  y: 450 + (radius - (20*(i%laps))) * Math.sin(currentAngleRadians)
-						};
+				if(type!="ods"){
+		    			var associated_ods = [];
+		    			var name = d3.select(obj).data()[0].name
+				    	data.filter(function(datanode){
+				    			//console.log(d3.select(obj).data()[0].name)
+					    		return datanode[type.toUpperCase()] == name;
+					    	}).forEach(function(d){
+						    	
+						    	//.classed("selected", function(d){ return associated.indexOf(d.name) != -1})
+					    		associated_ods.push(d.ODS);
+					    	})
+					    //console.log(associated_ods)
+						var coordinates = {x:450,y:450};
+					    var associated_points = d3.selectAll("circle.ods")
+							    			.data()
+							    			.filter(function(d){ return associated_ods.indexOf(d.name) != -1})
+							    			//.map(function(d){ return {x:d.x, y:d.y}})
+							    			.forEach(function(d, i, arr){
+							    				coordinates.x += (positions.ods[d.link_id].x - 450)/(arr.length + 1);	
+							    				coordinates.y += (positions.ods[d.link_id].y - 450)/(arr.length + 1);	
+							    			})
+							    positions[type][obj.__data__.link_id] = coordinates;
+							}
+
+						
 						//return coordinates;
 					})
 		}
+
+
+
+
 
 
 		//************************************
@@ -176,8 +217,8 @@ function create_graph(filename){
 		  circle.each(function(d,i) { radial(d,i,e.alpha); });
 			
 		  circle
-			.attr("cx", function(d) { return d.x; })
-			.attr("cy", function(d) { return d.y; })
+			.attr("cx", function(d) { return d.x ; })
+			.attr("cy", function(d) { return d.y ; })
 			.attr("data_link_id", function(d){return d.link_id })
 		}
 
@@ -210,6 +251,4 @@ window.onload = function(){
 								.on("click", function(d){
 									create_graph(this.value)
 								})
-
-		console.log(buttons)
 	}
