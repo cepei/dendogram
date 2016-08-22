@@ -13,8 +13,16 @@ function create_graph(filename){
 		});
 
 		links.forEach(function(link, i) {
-		  link.source = nodes[link.source] || (nodes[link.source] = {name: link.source, type: link.type=="ods-fuente"?"ods":"fuente", link_id: i});
-		  link.target = nodes[link.target] || (nodes[link.target] = {name: link.target, type: link.type=="ods-fuente"?"fuente":"datos", link_id: i});
+		  link.source = nodes[link.source] || (nodes[link.source] = {name: link.source, 
+		  															type: link.type=="ods-fuente"?"ods":"fuente", 
+		  															link_id: i, 
+		  															x:300 + Math.random()*300, 
+		  															y:300 + Math.random()*300});
+		  link.target = nodes[link.target] || (nodes[link.target] = {name: link.target, 
+		  															type: link.type=="ods-fuente"?"fuente":"datos", 
+		  															link_id: i, 
+		  															x:300 + Math.random()*300, 
+		  															y:300 + Math.random()*300});
 		});
 		
 
@@ -31,12 +39,13 @@ function create_graph(filename){
 		    .size([width, height])
 		    .linkDistance(60)
 		    .linkStrength(0)
-		    .friction(0.9)
+		    .friction(0)
 		    .gravity(0)
-		    .charge(-200)
-		    .chargeDistance(10)
+		    .charge(-30)
+		    .chargeDistance(20)
 		    .on("tick", moveToRadial)
-		    .start();
+		
+
 
 		d3.select("#forcemap").html("")
 
@@ -137,15 +146,8 @@ function create_graph(filename){
 
 
 		    })
-	/**/	    .classed("fixed", true);
-		    //.style("filter", "url(#drop-shadow)")
 
 
-		var text = svg.append("g").selectAll("text")
-		    .data(force.nodes())
-		  .enter().append("text")
-		    .attr("x", 8)
-		    .attr("y", ".31em")
 
 		//************************************
 		//calculate data positions from start
@@ -154,11 +156,10 @@ function create_graph(filename){
 
 			d3.selectAll("circle.ods")
 				.sort(function(a,b){
-					//console.log(a);
 					return d3.ascending(parseInt(a.name.split(" ")[0]), parseInt(b.name.split(" ")[0]))
 				})[0]
 				.forEach(function(obj,i){
-					console.log(d3.select(obj).data()[0].name)
+
 					var increment_angle = 360/(d3.selectAll("circle.ods")[0].length)
 					var radius = 400;
 					var startAngle = 0;
@@ -180,14 +181,12 @@ function create_graph(filename){
 		    			var associated_ods = [];
 		    			var name = d3.select(obj).data()[0].name
 				    	data.filter(function(datanode){
-				    			//console.log(d3.select(obj).data()[0].name)
 					    		return datanode[type.toUpperCase()] == name;
 					    	}).forEach(function(d){
 						    	
 						    	//.classed("selected", function(d){ return associated.indexOf(d.name) != -1})
 					    		associated_ods.push(d.ODS);
 					    	})
-					    //console.log(associated_ods)
 						var coordinates = {x:450,y:450};
 					    var associated_points = d3.selectAll("circle.ods")
 							    			.data()
@@ -205,12 +204,18 @@ function create_graph(filename){
 					})
 		}
 
+/*		circle
+			.attr("cx", function(d) { return 0 })
+			.attr("cy", function(d) { return 0 })*/
+			//.attr("cy", function(d) { return d.y ; })
 
+		force.start();
+
+		force.friction(0.9)
 
 		//************************************
 
 		function moveToRadial(e) {
-			//console.log(":::" + filename)
 			path.attr("d", linkArc);
 		  circle.each(function(d,i) { radial(d,i,e.alpha); });
 			
@@ -224,8 +229,6 @@ function create_graph(filename){
 		function radial(data, index, alpha) {
 			// check out the post
 			// http://macwright.org/2013/03/05/math-for-pictures.html
-
-
 			var radialPoint = positions[data.type][data.link_id]
 			var affectSize = alpha * 0.1 ;
 			data.x += (radialPoint.x - data.x) * affectSize;
