@@ -22,11 +22,16 @@ function create_graph(filename){
 		  links.push({"source": d.DATOS, "target":d.FUENTE, "type": "fuente-datos"});
 		});
 
+		for(var key in nodes){
+			nodes[key].x = 300 + Math.random()*300;
+			nodes[key].y = 300 + Math.random()*300;
+		}
 		
 		console.log(links)
 		links.forEach(function(link, i) {
 		  link.source = nodes[link.source] //|| (nodes[link.source] = {name: link.source, type: link.type=="ods-fuente"?"ods":"fuente", node_index: i});
 		  link.target = nodes[link.target] //|| (nodes[link.target] = {name: link.target, type: link.type=="ods-fuente"?"fuente":"datos", node_index: i});
+
 		});
 		
 		console.log(links)
@@ -44,12 +49,13 @@ function create_graph(filename){
 		    .size([width, height])
 		    .linkDistance(60)
 		    .linkStrength(0)
-		    .friction(0.9)
+		    .friction(0)
 		    .gravity(0)
-		    .charge(-200)
-		    .chargeDistance(10)
+		    .charge(-30)
+		    .chargeDistance(20)
 		    .on("tick", moveToRadial)
-		    .start();
+		
+
 
 		d3.select("#forcemap").html("")
 
@@ -150,15 +156,8 @@ function create_graph(filename){
 
 
 		    })
-	/**/	    .classed("fixed", true);
-		    //.style("filter", "url(#drop-shadow)")
 
 
-		var text = svg.append("g").selectAll("text")
-		    .data(force.nodes())
-		  .enter().append("text")
-		    .attr("x", 8)
-		    .attr("y", ".31em")
 
 		//************************************
 		//calculate data positions from start
@@ -170,6 +169,7 @@ function create_graph(filename){
 					return d3.ascending(parseInt(a.name.split(" ")[0]), parseInt(b.name.split(" ")[0]))
 				})[0]
 				.forEach(function(obj,i){
+
 					var increment_angle = 360/(d3.selectAll("circle.ods")[0].length)
 					var radius = 400;
 					var startAngle = 0;
@@ -215,7 +215,14 @@ function create_graph(filename){
 					})
 		}
 
+/*		circle
+			.attr("cx", function(d) { return 0 })
+			.attr("cy", function(d) { return 0 })*/
+			//.attr("cy", function(d) { return d.y ; })
 
+		force.start();
+
+		force.friction(0.9)
 
 		//************************************
 
@@ -233,8 +240,8 @@ function create_graph(filename){
 			// check out the post
 			// http://macwright.org/2013/03/05/math-for-pictures.html
 
-
 			var radialPoint = positions[data.type][data.node_index]
+
 			var affectSize = alpha * 0.1 ;
 			data.x += (radialPoint.x - data.x) * affectSize;
 			data.y += (radialPoint.y - data.y) * affectSize;
