@@ -29,8 +29,8 @@ function create_graph(filename){
 		
 		console.log(links)
 		links.forEach(function(link, i) {
-		  link.source = nodes[link.source] //|| (nodes[link.source] = {name: link.source, type: link.type=="ods-fuente"?"ods":"fuente", node_index: i});
-		  link.target = nodes[link.target] //|| (nodes[link.target] = {name: link.target, type: link.type=="ods-fuente"?"fuente":"datos", node_index: i});
+		  link.source = nodes[link.source]; 
+		  link.target = nodes[link.target];
 
 		});
 		
@@ -51,8 +51,14 @@ function create_graph(filename){
 		    .linkStrength(0)
 		    .friction(0)
 		    .gravity(0)
-		    .charge(-30)
-		    .chargeDistance(20)
+		    .charge(function(node){
+		    	if(node.type=="ods")
+		    		return -50
+		    	if(node.type=="fuente")
+		    		return -15
+		    	return -10
+		    })
+		    .chargeDistance(30)
 		    .on("tick", moveToRadial)
 		
 
@@ -204,8 +210,8 @@ function create_graph(filename){
 							    			//.map(function(d){ return {x:d.x, y:d.y}})
 							    			.forEach(function(d, i, arr){
 							    				//console.log(d.type);
-							    				coordinates.x += (positions.ods[d.node_index].x - 450)/(arr.length + (type=="fuente"?0.3:0.1));	
-							    				coordinates.y += (positions.ods[d.node_index].y - 450)/(arr.length + (type=="fuente"?0.3:0.1));	
+							    				coordinates.x += (positions.ods[d.node_index].x - 450)/(arr.length + (type=="fuente"?0.2:0.08));	
+							    				coordinates.y += (positions.ods[d.node_index].y - 450)/(arr.length + (type=="fuente"?0.2:0.08));	
 							    			})
 							    positions[type][obj.__data__.node_index] = coordinates;
 							}
