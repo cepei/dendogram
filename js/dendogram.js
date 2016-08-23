@@ -6,7 +6,14 @@ function create_graph(filename){
 		var links = []
 
 
-		data.forEach(function(d) {
+		data
+		.filter(function(elem){
+			var ods_index = parseInt(elem.ODS.split(" ")[0]);
+			console.log(ods_index);
+			return ods_index > 0 && ods_index <=17;
+
+		})
+		.forEach(function(d) {
 			// Remember, those frightening operators are or that are evaluated in order, (If first is true second is not executed)
 		  links.push({"source": d.ODS, "target":d.FUENTE, "type": "ods-fuente"});
 		  links.push({"source": d.FUENTE, "target":d.DATOS, "type": "fuente-datos"});
