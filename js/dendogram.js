@@ -9,21 +9,27 @@ function create_graph(filename){
 		data
 		.filter(function(elem){
 			var ods_index = parseInt(elem.ODS.split(" ")[0]);
-			console.log(ods_index);
 			return ods_index > 0 && ods_index <=17;
 
 		})
-		.forEach(function(d) {
+		.forEach(function(d,i) {
 			// Remember, those frightening operators are or that are evaluated in order, (If first is true second is not executed)
-		  links.push({"source": d.ODS, "target":d.FUENTE, "type": "ods-fuente"});
-		  links.push({"source": d.FUENTE, "target":d.DATOS, "type": "fuente-datos"});
+		  nodes[d.ODS] = {name: d.ODS, type: "ods", node_index: i}	
+		  nodes[d.FUENTE] = {name: d.FUENTE, type: "fuente", node_index: i}	
+		  nodes[d.DATOS] = {name: d.DATOS, type: "datos", node_index: i}	
+
+		  links.push({"source": d.ODS, "target":d.DATOS, "type": "ods-fuente"});
+		  links.push({"source": d.DATOS, "target":d.FUENTE, "type": "fuente-datos"});
 		});
 
+		
+		console.log(links)
 		links.forEach(function(link, i) {
-		  link.source = nodes[link.source] || (nodes[link.source] = {name: link.source, type: link.type=="ods-fuente"?"ods":"fuente", link_id: i});
-		  link.target = nodes[link.target] || (nodes[link.target] = {name: link.target, type: link.type=="ods-fuente"?"fuente":"datos", link_id: i});
+		  link.source = nodes[link.source] //|| (nodes[link.source] = {name: link.source, type: link.type=="ods-fuente"?"ods":"fuente", node_index: i});
+		  link.target = nodes[link.target] //|| (nodes[link.target] = {name: link.target, type: link.type=="ods-fuente"?"fuente":"datos", node_index: i});
 		});
 		
+		console.log(links)
 
 		var width = 1000,
 		    height = 1000,
@@ -161,11 +167,9 @@ function create_graph(filename){
 
 			d3.selectAll("circle.ods")
 				.sort(function(a,b){
-					//console.log(a);
 					return d3.ascending(parseInt(a.name.split(" ")[0]), parseInt(b.name.split(" ")[0]))
 				})[0]
 				.forEach(function(obj,i){
-					console.log(d3.select(obj).data()[0].name)
 					var increment_angle = 360/(d3.selectAll("circle.ods")[0].length)
 					var radius = 400;
 					var startAngle = 0;
@@ -173,7 +177,7 @@ function create_graph(filename){
 					var currentAngleRadians = currentAngle * D2R;
 					// the 500 & 250 are to center the circle we are creating
 					var laps = Math.floor(d3.selectAll("circle.ods")[0].length/180) + 1;
-					positions["ods"][obj.__data__.link_id] = {
+					positions["ods"][obj.__data__.node_index] = {
 					  x: 450 + (radius - (20*(i%laps))) * Math.cos(currentAngleRadians),
 					  y: 450 + (radius - (20*(i%laps))) * Math.sin(currentAngleRadians)
 					};
@@ -187,24 +191,23 @@ function create_graph(filename){
 		    			var associated_ods = [];
 		    			var name = d3.select(obj).data()[0].name
 				    	data.filter(function(datanode){
-				    			//console.log(d3.select(obj).data()[0].name)
 					    		return datanode[type.toUpperCase()] == name;
 					    	}).forEach(function(d){
 						    	
 						    	//.classed("selected", function(d){ return associated.indexOf(d.name) != -1})
 					    		associated_ods.push(d.ODS);
 					    	})
-					    //console.log(associated_ods)
 						var coordinates = {x:450,y:450};
 					    var associated_points = d3.selectAll("circle.ods")
 							    			.data()
 							    			.filter(function(d){ return associated_ods.indexOf(d.name) != -1})
 							    			//.map(function(d){ return {x:d.x, y:d.y}})
 							    			.forEach(function(d, i, arr){
-							    				coordinates.x += (positions.ods[d.link_id].x - 450)/(arr.length + 0.5);	
-							    				coordinates.y += (positions.ods[d.link_id].y - 450)/(arr.length + 0.5);	
+							    				//console.log(d.type);
+							    				coordinates.x += (positions.ods[d.node_index].x - 450)/(arr.length + (type=="fuente"?0.3:0.1));	
+							    				coordinates.y += (positions.ods[d.node_index].y - 450)/(arr.length + (type=="fuente"?0.3:0.1));	
 							    			})
-							    positions[type][obj.__data__.link_id] = coordinates;
+							    positions[type][obj.__data__.node_index] = coordinates;
 							}
 
 						
@@ -217,14 +220,12 @@ function create_graph(filename){
 		//************************************
 
 		function moveToRadial(e) {
-			//console.log(":::" + filename)
 			path.attr("d", linkArc);
 		  circle.each(function(d,i) { radial(d,i,e.alpha); });
 			
 		  circle
 			.attr("cx", function(d) { return d.x ; })
 			.attr("cy", function(d) { return d.y ; })
-			.attr("data_link_id", function(d){return d.link_id })
 		}
 
 
@@ -233,7 +234,7 @@ function create_graph(filename){
 			// http://macwright.org/2013/03/05/math-for-pictures.html
 
 
-			var radialPoint = positions[data.type][data.link_id]
+			var radialPoint = positions[data.type][data.node_index]
 			var affectSize = alpha * 0.1 ;
 			data.x += (radialPoint.x - data.x) * affectSize;
 			data.y += (radialPoint.y - data.y) * affectSize;
