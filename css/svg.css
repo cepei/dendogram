@@ -29,7 +29,7 @@ circle.selected {
 circle {
   fill: #ccc;
   stroke: #333;
-  stroke-width: 1.5px;
+  stroke-width: 0px;
 }
 
 text {

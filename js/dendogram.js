@@ -13,7 +13,6 @@ function create_graph(filename){
 
 		})
 		.forEach(function(d,i) {
-			// Remember, those frightening operators are or that are evaluated in order, (If first is true second is not executed)
 		  nodes[d.ODS] = {name: d.ODS, type: "ods", node_index: i}	
 		  nodes[d.FUENTE] = {name: d.FUENTE, type: "fuente", node_index: i}	
 		  nodes[d.DATOS] = {name: d.DATOS, type: "datos", node_index: i}	
@@ -27,14 +26,24 @@ function create_graph(filename){
 			nodes[key].y = 300 + Math.random()*300;
 		}
 		
-		console.log(links)
+
 		links.forEach(function(link, i) {
 		  link.source = nodes[link.source]; 
 		  link.target = nodes[link.target];
 
 		});
+
+		ocurrences = {"ods":{"__max":0}, "fuente":{"__max":0}, "datos":{"__max":0}}
 		
-		console.log(links)
+		data.forEach(function(d){
+			for(key in ocurrences){
+				ocurrences[key][d[key.toUpperCase()]] = ocurrences[key][d[key.toUpperCase()]]!=undefined?ocurrences[key][d[key.toUpperCase()]]+1:1;
+				if(ocurrences[key][d[key.toUpperCase()]] > ocurrences[key]["__max"])
+					ocurrences[key]["__max"] = ocurrences[key][d[key.toUpperCase()]]
+			}
+		})
+		console.log(data)
+		console.log(ocurrences)
 
 		var width = 1000,
 		    height = 1000,
@@ -55,10 +64,10 @@ function create_graph(filename){
 		    	if(node.type=="ods")
 		    		return -50
 		    	if(node.type=="fuente")
-		    		return -15
+		    		return -20
 		    	return -10
 		    })
-		    .chargeDistance(30)
+		    .chargeDistance(50)
 		    .on("tick", moveToRadial)
 		
 
@@ -126,25 +135,16 @@ function create_graph(filename){
 		  .enter().append("circle")
 		    .attr("r", function(d){
 		    	if(d.type=="ods")
-		    		return 10
+		    		return 10 + 10*ocurrences[d.type][d.name]/ocurrences[d.type]["__max"]
 		    	if(d.type=="fuente")
-		    		return 4
-		    	return 2
+		    		return 5 + 5*ocurrences[d.type][d.name]/ocurrences[d.type]["__max"]
+		    	return 3 + 3*ocurrences[d.type][d.name]/ocurrences[d.type]["__max"]
 		    })
 		    .attr("class", function(d) { return d.type; })
 		    .call(force.drag)
 		    .on("click", function(d){
 		    	//d3.selectAll()
-		    	var associated = [];
-
-		    	data.filter(function(obj){
-		    		return obj[d.type.toUpperCase()] == d.name
-		    	}).forEach(function(d){
-		    		associated.push(d.ODS);
-		    		associated.push(d.FUENTE);
-		    		associated.push(d.DATOS);
-
-		    	})
+		    	var associated = getAssociatedNodes(d);
 
 		    	//d3.selectAll("circle").classed("selected", false)
 		    	d3.selectAll("circle")
@@ -210,8 +210,8 @@ function create_graph(filename){
 							    			//.map(function(d){ return {x:d.x, y:d.y}})
 							    			.forEach(function(d, i, arr){
 							    				//console.log(d.type);
-							    				coordinates.x += (positions.ods[d.node_index].x - 450)/(arr.length + (type=="fuente"?0.2:0.08));	
-							    				coordinates.y += (positions.ods[d.node_index].y - 450)/(arr.length + (type=="fuente"?0.2:0.08));	
+							    				coordinates.x += (positions.ods[d.node_index].x - 450)/(arr.length + (type=="fuente"?0.4:0.2));	
+							    				coordinates.y += (positions.ods[d.node_index].y - 450)/(arr.length + (type=="fuente"?0.4:0.2));	
 							    			})
 							    positions[type][obj.__data__.node_index] = coordinates;
 							}
@@ -261,6 +261,20 @@ function create_graph(filename){
 
 		function transform(d) {
 		  return "translate(" + d.x + "," + d.y + ")";
+		}
+
+		function getAssociatedNodes(nodedata){
+			var associated = [];
+
+		    	data.filter(function(obj){
+		    		return obj[nodedata.type.toUpperCase()] == nodedata.name
+		    	}).forEach(function(d){
+		    		associated.push(d.ODS);
+		    		associated.push(d.FUENTE);
+		    		associated.push(d.DATOS);
+
+		    	})
+		    return associated;
 		}
 
 	})
