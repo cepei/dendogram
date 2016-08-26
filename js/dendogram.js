@@ -42,8 +42,6 @@ function create_graph(filename){
 					ocurrences[key]["__max"] = ocurrences[key][d[key.toUpperCase()]]
 			}
 		})
-		console.log(data)
-		console.log(ocurrences)
 
 		var width = 1000,
 		    height = 1000,
@@ -195,30 +193,32 @@ function create_graph(filename){
 			d3.selectAll("circle." + type )[0].forEach(function(obj,i){
 				if(type!="ods"){
 		    			var associated_ods = [];
+						var coordinates = {x:450,y:450};
 		    			var name = d3.select(obj).data()[0].name
 				    	data.filter(function(datanode){
-					    		return datanode[type.toUpperCase()] == name;
-					    	}).forEach(function(d){
-						    	
+					    		return datanode[type.toUpperCase()] == name && datanode.ODS != "";
+					    	}).forEach(function(d, i, arr){
+/*					    		console.log(nodes[d.ODS].node_index)
+								console.log(positions["ods"])  */	
+								console.log(d.ODS)
+			    				coordinates.x += (positions.ods[nodes[d.ODS].node_index].x - 450)/(arr.length + (type=="fuente"?0.4:0.2));	
+			    				coordinates.y += (positions.ods[nodes[d.ODS].node_index].y - 450)/(arr.length + (type=="fuente"?0.4:0.2));									
 						    	//.classed("selected", function(d){ return associated.indexOf(d.name) != -1})
 					    		associated_ods.push(d.ODS);
 					    	})
-						var coordinates = {x:450,y:450};
-					    var associated_points = d3.selectAll("circle.ods")
-							    			.data()
-							    			.filter(function(d){ return associated_ods.indexOf(d.name) != -1})
-							    			//.map(function(d){ return {x:d.x, y:d.y}})
-							    			.forEach(function(d, i, arr){
-							    				//console.log(d.type);
-							    				coordinates.x += (positions.ods[d.node_index].x - 450)/(arr.length + (type=="fuente"?0.4:0.2));	
-							    				coordinates.y += (positions.ods[d.node_index].y - 450)/(arr.length + (type=="fuente"?0.4:0.2));	
-							    			})
-							    positions[type][obj.__data__.node_index] = coordinates;
-							}
 
-						
-						//return coordinates;
-					})
+/*						d3.selectAll("circle.ods")
+			    			.data()
+			    			.filter(function(d){ return associated_ods.indexOf(d.name) != -1})
+			    			.forEach(function(d, i, arr){
+			    				coordinates.x += (positions.ods[d.node_index].x - 450)/(arr.length + (type=="fuente"?0.4:0.2));	
+			    				coordinates.y += (positions.ods[d.node_index].y - 450)/(arr.length + (type=="fuente"?0.4:0.2));	
+			    			})*/
+				    positions[type][obj.__data__.node_index] = coordinates;
+				}
+
+
+			})
 		}
 
 /*		circle
