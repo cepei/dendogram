@@ -135,14 +135,21 @@
 
 			function getNodesPositions(nodes, data, x_center, y_center){
 					var positions = {"ods":{}, "fuente":{}, "datos":{}}		
-			
+					setODSNodesOnCircularPositions(positions, nodes);
+					setNodesPositionsByODSAfinity(positions, nodes, data, x_center, y_center);
+					return positions;
+			}
+
+			function setODSNodesOnCircularPositions(positions, nodes){
 					for(key in nodes){
 						var node = nodes[key];
 						if(node.type == "ods"){
 							positions["ods"][node.node_index] = getODSNodePosition(node)
 						}
 					}
-			
+			}
+
+			function setNodesPositionsByODSAfinity(positions, nodes, data, x_center, y_center){
 					for(key in nodes){
 						var node = nodes[key];
 						if(node.type != "ods"){
@@ -153,9 +160,7 @@
 						    																	positions)
 						}
 					}
-
-					return positions;
-				}
+			}
 
 			function getNodePositionByODSAfinity(node, data, x_center, y_center, positions){
 				var coordinates = {x:x_center,y:y_center};
@@ -207,9 +212,9 @@
 					var  D2R = Math.PI / 180;		
 					for(var key in nodes){
 						var tetha = Math.random() * 360 * D2R					
-						var r = 150 + Math.random() * data.length * 0.1
+						var r = (100 + Math.random() * data.length * 0.1) //* (1 - Math.cos((tetha + Math.PI/2) * 3));
 						nodes[key].x = 400 + (r * Math.cos(tetha));
-						nodes[key].y = 400 + (r *Math.sin(tetha));
+						nodes[key].y = 400 + (r * Math.sin(tetha));
 					}
 					
 			}
@@ -257,15 +262,28 @@
 			}
 
 			function createFilter(parent){
+
+				var filter = appendNewFilterToParent(parent);
+				appendGaussianBlurToFilter(filter);
+				setOffsetToFilter(filter);
+				overlayOriginalImageToFilter(filter);
+
+
+			}
+
+			function appendNewFilterToParent(parent){
 				// create filter with id #drop-shadow
 				// height=130% so that the shadow is not clipped
-				var filter = parent.append("filter")
-				    .attr("id", "drop-shadow")
-				    .attr("x", "-200%")
-				    .attr("y", "-200%")
-				    .attr("height", "400%")
-					.attr("width", "400%");
+				return filter = parent.append("filter")
+									    .attr("id", "drop-shadow")
+									    .attr("x", "-200%")
+									    .attr("y", "-200%")
+									    .attr("height", "400%")
+										.attr("width", "400%");
 
+			}
+
+			function appendGaussianBlurToFilter(filter){
 				// SourceAlpha refers to opacity of graphic that this filter will be applied to
 				// convolve that with a Gaussian with standard deviation 3 and store result
 				// in blur
@@ -274,6 +292,9 @@
 				    .attr("stdDeviation", 5)
 				    .attr("result", "blur");
 
+			}
+
+			function setOffsetToFilter(filter){
 				// translate output of Gaussian blur to the right and downwards with 2px
 				// store result in offsetBlur
 				filter.append("feOffset")
@@ -281,7 +302,9 @@
 				    .attr("dx", 1)
 				    .attr("dy", 1)
 				    .attr("result", "offsetBlur");
+			}
 
+			function overlayOriginalImageToFilter(filter){
 				// overlay original SourceGraphic over translated blurred opacity by using
 				// feMerge filter. Order of specifying inputs is important!
 				var feMerge = filter.append("feMerge");
