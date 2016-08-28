@@ -1,287 +1,305 @@
-
-var force
-function create_graph(filename){
-	d3.csv(filename, function(data){
-		var nodes = {};
-		var links = []
+(function(){
+	var force
+	function create_graph(filename){
+		d3.csv(filename, function(rawdata){
 
 
-		data
-		.filter(function(elem){
-			var ods_index = parseInt(elem.ODS.split(" ")[0]);
-			return ods_index > 0 && ods_index <=17;
+			var width = 1000,
+			    height = 1000
+			var x_center = 450;
+			var y_center = 450;
 
-		})
-		.forEach(function(d,i) {
-		  nodes[d.ODS] = {name: d.ODS, type: "ods", node_index: i}	
-		  nodes[d.FUENTE] = {name: d.FUENTE, type: "fuente", node_index: i}	
-		  nodes[d.DATOS] = {name: d.DATOS, type: "datos", node_index: i}	
-
-		  links.push({"source": d.ODS, "target":d.DATOS, "type": "ods-fuente"});
-		  links.push({"source": d.DATOS, "target":d.FUENTE, "type": "fuente-datos"});
-		});
-
-		for(var key in nodes){
-			nodes[key].x = 300 + Math.random()*300;
-			nodes[key].y = 300 + Math.random()*300;
-		}
-		
-
-		links.forEach(function(link, i) {
-		  link.source = nodes[link.source]; 
-		  link.target = nodes[link.target];
-
-		});
-
-		ocurrences = {"ods":{"__max":0}, "fuente":{"__max":0}, "datos":{"__max":0}}
-		
-		data.forEach(function(d){
-			for(key in ocurrences){
-				ocurrences[key][d[key.toUpperCase()]] = ocurrences[key][d[key.toUpperCase()]]!=undefined?ocurrences[key][d[key.toUpperCase()]]+1:1;
-				if(ocurrences[key][d[key.toUpperCase()]] > ocurrences[key]["__max"])
-					ocurrences[key]["__max"] = ocurrences[key][d[key.toUpperCase()]]
+			var base_node = {
+				"base_radius":{"ods":10, "fuente":5, "datos":3},
+				"charge":{"ods":-50, "fuente":-20, "datos":-10}
 			}
-		})
 
-		var width = 1000,
-		    height = 1000,
-			D2R = Math.PI / 180;
+			var data = rawdata.filter(rowContainsValidODS);
+			var nodes = createNodes(data);
+			var links = createLinks(data);
+			var positions = getNodesPositions(nodes, data, x_center, y_center);
+			var ocurrences = getNodesOcurrencesInDatabase(data)
+			setInitialNodePositions(nodes)
 
-		if(force)
-			force.stop()
+			if(force)
+				force.stop()
 
-		force = d3.layout.force()
-		    .nodes(d3.values(nodes))
-		    .links(links)
-		    .size([width, height])
-		    .linkDistance(60)
-		    .linkStrength(0)
-		    .friction(0)
-		    .gravity(0)
-		    .charge(function(node){
-		    	if(node.type=="ods")
-		    		return -50
-		    	if(node.type=="fuente")
-		    		return -20
-		    	return -10
-		    })
-		    .chargeDistance(50)
-		    .on("tick", moveToRadial)
-		
+			force = d3.layout.force()
+			    .nodes(d3.values(nodes))
+			    .links(links)
+			    .size([width, height])
+			    .linkDistance(60)
+			    .linkStrength(0)
+			    .friction(0.9)
+			    .gravity(0)
+			    .charge(calculateCharge)
+			    .chargeDistance(50)
+			    .on("tick", moveToRadial)
+			    .start()
+			
 
 
-		d3.select("#forcemap").html("")
+			d3.select("#forcemap").html("")
 
-		var svg = d3.select("#forcemap").append("svg")
-		    .attr("width", width)
-		    .attr("height", height);
+			var svg = d3.select("#forcemap").append("svg")
+			    .attr("width", width)
+			    .attr("height", height);
 
 
 
+			var defs = svg.append("defs");
+			filter = createFilter(defs)
 
 
-		// filters go in defs element
-		var defs = svg.append("defs");
+			var path = svg.append("g").selectAll("path")
+			    .data(force.links())
+			  .enter().append("path")
+			    .attr("class", function(d) { return "link " + d.type; })
+			    .attr("marker-end", function(d) { return "url(#" + d.type + ")"; });
 
-		// create filter with id #drop-shadow
-		// height=130% so that the shadow is not clipped
-		var filter = defs.append("filter")
-		    .attr("id", "drop-shadow")
-		    .attr("x", "-200%")
-		    .attr("y", "-200%")
-		    .attr("height", "400%")
-			.attr("width", "400%");
-
-		// SourceAlpha refers to opacity of graphic that this filter will be applied to
-		// convolve that with a Gaussian with standard deviation 3 and store result
-		// in blur
-		filter.append("feGaussianBlur")
-		    .attr("in", "SourceAlpha")
-		    .attr("stdDeviation", 5)
-		    .attr("result", "blur");
-
-		// translate output of Gaussian blur to the right and downwards with 2px
-		// store result in offsetBlur
-		filter.append("feOffset")
-		    .attr("in", "blur")
-		    .attr("dx", 1)
-		    .attr("dy", 1)
-		    .attr("result", "offsetBlur");
-
-		// overlay original SourceGraphic over translated blurred opacity by using
-		// feMerge filter. Order of specifying inputs is important!
-		var feMerge = filter.append("feMerge");
-
-		feMerge.append("feMergeNode")
-		    .attr("in", "offsetBlur")
-		feMerge.append("feMergeNode")
-		    .attr("in", "SourceGraphic");
+			var circle = svg.append("g").selectAll("circle")
+			    .data(force.nodes())
+			  .enter().append("circle")
+			    .attr("r", calculateNodeRadius)
+			    .attr("class", function(d) { return d.type; })
+			    .call(force.drag)
+			    .on("click", clickNode)
 
 
 
+			//************************************
+			//Functions
+			//************************************
+
+			function rowContainsValidODS(row){
+				var ods_index = parseInt(row.ODS.split(" ")[0]);
+				return ods_index > 0 && ods_index <=17;
+			}
 
 
+			function createNodes(data){
+				var nodes = {}
+					data
+					.forEach(function(d,i) {
+					  nodes[d.ODS] = {name: d.ODS, type: "ods", node_index: i}	
+					  nodes[d.FUENTE] = {name: d.FUENTE, type: "fuente", node_index: i}	
+					  nodes[d.DATOS] = {name: d.DATOS, type: "datos", node_index: i}	
 
-		var path = svg.append("g").selectAll("path")
-		    .data(force.links())
-		  .enter().append("path")
-		    .attr("class", function(d) { return "link " + d.type; })
-		    .attr("marker-end", function(d) { return "url(#" + d.type + ")"; });
+					});
 
-		var circle = svg.append("g").selectAll("circle")
-		    .data(force.nodes())
-		  .enter().append("circle")
-		    .attr("r", function(d){
-		    	if(d.type=="ods")
-		    		return 10 + 10*ocurrences[d.type][d.name]/ocurrences[d.type]["__max"]
-		    	if(d.type=="fuente")
-		    		return 5 + 5*ocurrences[d.type][d.name]/ocurrences[d.type]["__max"]
-		    	return 3 + 3*ocurrences[d.type][d.name]/ocurrences[d.type]["__max"]
-		    })
-		    .attr("class", function(d) { return d.type; })
-		    .call(force.drag)
-		    .on("click", function(d){
-		    	//d3.selectAll()
-		    	var associated = getAssociatedNodes(d);
+				return nodes
 
-		    	//d3.selectAll("circle").classed("selected", false)
-		    	d3.selectAll("circle")
-		    	.classed("selected", function(d){ return associated.indexOf(d.name) != -1})
-		    	.style("filter", function(d){ return associated.indexOf(d.name) != -1?"url(#drop-shadow)":""})
+			}
 
+			function createLinks(data){
+					var links = [];
+					data
+					.forEach(function(d,i) {
+					  links.push({"source": nodes[d.ODS], "target":nodes[d.DATOS], "type": "ods-fuente"});
+					  links.push({"source": nodes[d.DATOS], "target":nodes[d.FUENTE], "type": "fuente-datos"});
 
-		    	d3.selectAll(".link").classed("selected", 
-		    								function(d){ 
-		    									return associated.indexOf(d.source.name) != -1 && associated.indexOf(d.target.name) != -1})
+					})
 
-		    	d3.select("#tooltip")
-		  	    .attr("class", d.type)
-		    	.html( "<b>" + d.type.toUpperCase() + "</b>: " + d.name)
+					return links
+			}
+
+			function clickNode(d){
+			    	var associated = getAssociatedNodes(d);
+			    	d3.selectAll("circle")
+			    	.classed("selected", function(d){ return associated.indexOf(d.name) != -1})
+			    	.style("filter", function(d){ return associated.indexOf(d.name) != -1?"url(#drop-shadow)":""})
 
 
-		    })
+			    	d3.selectAll(".link").classed("selected", 
+			    								function(d){ 
+			    									var is_source_associated = associated.indexOf(d.source.name) != -1;
+			    									var is_target_associated = associated.indexOf(d.target.name) != -1;
+			    									return is_source_associated && is_target_associated})
+
+			    	d3.select("#tooltip")
+			  	    .attr("class", d.type)
+			    	.html( "<b>" + d.type.toUpperCase() + "</b>: " + d.name)
+
+			}
 
 
+			function calculateNodeRadius(nodedata){
+				var weight = (1 + ocurrences[nodedata.type][nodedata.name]/ocurrences[nodedata.type]["__max"]);
+		    	return base_node.base_radius[nodedata.type] * weight;
 
-		//************************************
-		//calculate data positions from start
-		//************************************
-		var positions = {"ods":{}, "fuente":{}, "datos":{}}
+			}
 
-			d3.selectAll("circle.ods")
-				.sort(function(a,b){
-					return d3.ascending(parseInt(a.name.split(" ")[0]), parseInt(b.name.split(" ")[0]))
-				})[0]
-				.forEach(function(obj,i){
+			function calculateCharge(nodedata){
+		    	return base_node.charge[nodedata.type];
+			}
 
-					var increment_angle = 360/(d3.selectAll("circle.ods")[0].length)
-					var radius = 400;
-					var startAngle = 0;
-					var currentAngle = startAngle + (increment_angle * i);
-					var currentAngleRadians = currentAngle * D2R;
-					// the 500 & 250 are to center the circle we are creating
-					var laps = Math.floor(d3.selectAll("circle.ods")[0].length/180) + 1;
-					positions["ods"][obj.__data__.node_index] = {
-					  x: 450 + (radius - (20*(i%laps))) * Math.cos(currentAngleRadians),
-					  y: 450 + (radius - (20*(i%laps))) * Math.sin(currentAngleRadians)
-					};
-					//return coordinates;
-				})
+			function getNodesPositions(nodes, data, x_center, y_center){
+					var positions = {"ods":{}, "fuente":{}, "datos":{}}		
+			
+					for(key in nodes){
+						var node = nodes[key];
+						if(node.type == "ods"){
+							positions["ods"][node.node_index] = getODSNodePosition(node)
+						}
+					}
+			
+					for(key in nodes){
+						var node = nodes[key];
+						if(node.type != "ods"){
+						    positions[node.type][node.node_index] = getNodePositionByODSAfinity(node, 
+						    																	data, 
+						    																	x_center, 
+						    																	y_center, 
+						    																	positions)
+						}
+					}
 
-
-		for(var type in positions){
-			d3.selectAll("circle." + type )[0].forEach(function(obj,i){
-				if(type!="ods"){
-		    			var associated_ods = [];
-						var coordinates = {x:450,y:450};
-		    			var name = d3.select(obj).data()[0].name
-				    	data.filter(function(datanode){
-					    		return datanode[type.toUpperCase()] == name && datanode.ODS != "";
-					    	}).forEach(function(d, i, arr){
-/*					    		console.log(nodes[d.ODS].node_index)
-								console.log(positions["ods"])  */	
-								console.log(d.ODS)
-			    				coordinates.x += (positions.ods[nodes[d.ODS].node_index].x - 450)/(arr.length + (type=="fuente"?0.4:0.2));	
-			    				coordinates.y += (positions.ods[nodes[d.ODS].node_index].y - 450)/(arr.length + (type=="fuente"?0.4:0.2));									
-						    	//.classed("selected", function(d){ return associated.indexOf(d.name) != -1})
-					    		associated_ods.push(d.ODS);
-					    	})
-
-/*						d3.selectAll("circle.ods")
-			    			.data()
-			    			.filter(function(d){ return associated_ods.indexOf(d.name) != -1})
-			    			.forEach(function(d, i, arr){
-			    				coordinates.x += (positions.ods[d.node_index].x - 450)/(arr.length + (type=="fuente"?0.4:0.2));	
-			    				coordinates.y += (positions.ods[d.node_index].y - 450)/(arr.length + (type=="fuente"?0.4:0.2));	
-			    			})*/
-				    positions[type][obj.__data__.node_index] = coordinates;
+					return positions;
 				}
 
+			function getNodePositionByODSAfinity(node, data, x_center, y_center, positions){
+				var coordinates = {x:x_center,y:y_center};
+				var type = node.type;
+				var name = node.name;
+		    	data.filter(function(datanode){
+			    		return datanode[type.toUpperCase()] == name && datanode.ODS != "";
+			    	}).forEach(function(d, i, arr){
+			    		var weight = 1 / (arr.length * (type=="fuente"?1.25:1.1));
+			    		var ods_coordinates = positions.ods[nodes[d.ODS].node_index];
+	    				coordinates.x += (ods_coordinates.x - x_center) * weight;	
+	    				coordinates.y += (ods_coordinates.y - y_center) * weight;									
+			    	})
+			    return coordinates
 
-			})
-		}
+			}
 
-/*		circle
-			.attr("cx", function(d) { return 0 })
-			.attr("cy", function(d) { return 0 })*/
-			//.attr("cy", function(d) { return d.y ; })
-
-		force.start();
-
-		force.friction(0.9)
-
-		//************************************
-
-		function moveToRadial(e) {
-			path.attr("d", linkArc);
-		  circle.each(function(d,i) { radial(d,i,e.alpha); });
-			
-		  circle
-			.attr("cx", function(d) { return d.x ; })
-			.attr("cy", function(d) { return d.y ; })
-		}
-
-
-		function radial(data, index, alpha) {
-			// check out the post
-			// http://macwright.org/2013/03/05/math-for-pictures.html
-
-			var radialPoint = positions[data.type][data.node_index]
-
-			var affectSize = alpha * 0.1 ;
-			data.x += (radialPoint.x - data.x) * affectSize;
-			data.y += (radialPoint.y - data.y) * affectSize;
+			function getODSNodePosition(node){
+				var i = parseInt(node.name.split(" ")[0])
+				var increment_angle = 360/17
+				var radius = 400;
+				var offsetAngle = 0;
+				var currentAngleRadians = (offsetAngle + (increment_angle * i)) * Math.PI / 180 ;
+				return {
+						  x: x_center + (radius * Math.cos(currentAngleRadians)),
+						  y: y_center + (radius * Math.sin(currentAngleRadians))
+						};			
+			}
 
 
-		}
+			function getNodesOcurrencesInDatabase(data){
+				var ocurrences = {"ods":{"__max":0}, "fuente":{"__max":0}, "datos":{"__max":0}}
+				
+				data.forEach(function(d){
+					for(key in ocurrences){
+						if(!ocurrences[key][d[key.toUpperCase()]])
+							ocurrences[key][d[key.toUpperCase()]] = 0;
+						ocurrences[key][d[key.toUpperCase()]]++;
+						if(ocurrences[key][d[key.toUpperCase()]] > ocurrences[key]["__max"])
+							ocurrences[key]["__max"] = ocurrences[key][d[key.toUpperCase()]]
+					}
+				})
 
-		function linkArc(d) {
-		  return "M" + d.source.x + "," + d.source.y + "L" + d.target.x + "," + d.target.y;
-		}
+				return ocurrences;
 
-		function transform(d) {
-		  return "translate(" + d.x + "," + d.y + ")";
-		}
+			}
 
-		function getAssociatedNodes(nodedata){
-			var associated = [];
+			function setInitialNodePositions(nodes){
+					var  D2R = Math.PI / 180;		
+					for(var key in nodes){
+						var tetha = Math.random() * 360 * D2R					
+						var r = 150 + Math.random() * data.length * 0.1
+						nodes[key].x = 400 + (r * Math.cos(tetha));
+						nodes[key].y = 400 + (r *Math.sin(tetha));
+					}
+					
+			}
 
-		    	data.filter(function(obj){
-		    		return obj[nodedata.type.toUpperCase()] == nodedata.name
-		    	}).forEach(function(d){
-		    		associated.push(d.ODS);
-		    		associated.push(d.FUENTE);
-		    		associated.push(d.DATOS);
+			function moveToRadial(e) {
+				path.attr("d", linkArc);
+			  circle.each(function(d,i) { radial(d,i,e.alpha); });
+				
+			  circle
+				.attr("cx", function(d) { return d.x ; })
+				.attr("cy", function(d) { return d.y ; })
+			}
 
-		    	})
-		    return associated;
-		}
 
-	})
-}
-window.onload = function(){
-		var buttons = d3.selectAll(".country-selector")
-								.on("click", function(d){
-									create_graph(this.value)
-								})
+			function getAssociatedNodes(nodedata){
+				var associated = [];
+
+			    	data.filter(function(obj){
+			    		return obj[nodedata.type.toUpperCase()] == nodedata.name
+			    	}).forEach(function(d){
+			    		associated.push(d.ODS);
+			    		associated.push(d.FUENTE);
+			    		associated.push(d.DATOS);
+
+			    	})
+			    return associated;
+			}
+
+			// functions 
+			function linkArc(d) {
+			  return "M" + d.source.x + "," + d.source.y + "L" + d.target.x + "," + d.target.y;
+			}
+
+			function transform(d) {
+			  return "translate(" + d.x + "," + d.y + ")";
+			}
+
+			function radial(data, index, alpha) {
+				var radialPoint = positions[data.type][data.node_index]
+				var affectSize = alpha * 0.1 ;
+				data.x += (radialPoint.x - data.x) * affectSize;
+				data.y += (radialPoint.y - data.y) * affectSize;
+
+
+			}
+
+			function createFilter(parent){
+				// create filter with id #drop-shadow
+				// height=130% so that the shadow is not clipped
+				var filter = parent.append("filter")
+				    .attr("id", "drop-shadow")
+				    .attr("x", "-200%")
+				    .attr("y", "-200%")
+				    .attr("height", "400%")
+					.attr("width", "400%");
+
+				// SourceAlpha refers to opacity of graphic that this filter will be applied to
+				// convolve that with a Gaussian with standard deviation 3 and store result
+				// in blur
+				filter.append("feGaussianBlur")
+				    .attr("in", "SourceAlpha")
+				    .attr("stdDeviation", 5)
+				    .attr("result", "blur");
+
+				// translate output of Gaussian blur to the right and downwards with 2px
+				// store result in offsetBlur
+				filter.append("feOffset")
+				    .attr("in", "blur")
+				    .attr("dx", 1)
+				    .attr("dy", 1)
+				    .attr("result", "offsetBlur");
+
+				// overlay original SourceGraphic over translated blurred opacity by using
+				// feMerge filter. Order of specifying inputs is important!
+				var feMerge = filter.append("feMerge");
+
+				feMerge.append("feMergeNode")
+				    .attr("in", "offsetBlur")
+				feMerge.append("feMergeNode")
+				    .attr("in", "SourceGraphic");
+
+			}
+
+		})
 	}
+	window.onload = function(){
+			var buttons = d3.selectAll(".country-selector")
+									.on("click", function(d){
+										create_graph(this.value)
+									})
+		}
+
+}())
