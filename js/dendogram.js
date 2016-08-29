@@ -82,7 +82,7 @@
 				function createNodes(data, ODSs){
 					var nodes = {}
 					ODSs.forEach(function(d,i){
-						//nodes[d.ODS] = {name: d.ODS, type: "ods", node_index: -i}
+						nodes[d.ODS] = {name: d.ODS, type: "ods", node_index: -i}
 					})
 
 					data
